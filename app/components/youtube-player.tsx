@@ -13,7 +13,7 @@ type YouTubePlayerProps = {
   title: string;
   startPosition: number;
   durationMinutes: number | null;
-  watchProgress: number;
+  watchPositionPercent: number;
   trackingEnabled: boolean;
   autoplay?: boolean;
   onToggleAutoplay?: () => void;
@@ -68,7 +68,7 @@ export function YouTubePlayer({
   title,
   startPosition,
   durationMinutes,
-  watchProgress: initialProgress,
+  watchPositionPercent: initialProgress,
   trackingEnabled,
   autoplay = false,
   onToggleAutoplay,

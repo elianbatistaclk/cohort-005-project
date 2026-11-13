@@ -437,7 +437,7 @@ export async function action({ params, request }: Route.ActionArgs) {
 
 const STEPS = [
   { label: "Settings", number: 1 },
-  { label: "Questions", number: 2 },
+  { label: "Quiz Questions", number: 2 },
   { label: "Answers", number: 3 },
   { label: "Review", number: 4 },
 ];
@@ -652,7 +652,7 @@ export default function QuizBuilderWizard({
       <div className="space-y-4">
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold">Questions</h2>
+            <h2 className="text-lg font-semibold">Quiz Questions</h2>
             <p className="text-sm text-muted-foreground">
               Add questions to your quiz. Drag to reorder. You&apos;ll set
               answer options in the next step.
@@ -661,7 +661,7 @@ export default function QuizBuilderWizard({
           <CardContent className="space-y-4">
             {wizard.questions.length === 0 && (
               <p className="text-sm text-muted-foreground">
-                No questions added yet. Click &quot;Add Question&quot; to get
+                No quiz questions added yet. Click &quot;Add Quiz Question&quot; to get
                 started.
               </p>
             )}
@@ -753,7 +753,7 @@ export default function QuizBuilderWizard({
 
             <Button variant="outline" onClick={addQuestion}>
               <Plus className="mr-1.5 size-4" />
-              Add Question
+              Add Quiz Question
             </Button>
           </CardContent>
         </Card>
@@ -930,20 +930,20 @@ export default function QuizBuilderWizard({
     for (const q of wizard.questions) {
       if (!q.text.trim())
         validationErrors.push(
-          `Question ${wizard.questions.indexOf(q) + 1} has no text.`
+          `Quiz Question ${wizard.questions.indexOf(q) + 1} has no text.`
         );
       if (q.options.length < 2)
         validationErrors.push(
-          `Question ${wizard.questions.indexOf(q) + 1} needs at least 2 options.`
+          `Quiz Question ${wizard.questions.indexOf(q) + 1} needs at least 2 options.`
         );
       if (!q.options.some((o) => o.isCorrect))
         validationErrors.push(
-          `Question ${wizard.questions.indexOf(q) + 1} has no correct answer.`
+          `Quiz Question ${wizard.questions.indexOf(q) + 1} has no correct answer.`
         );
       for (const opt of q.options) {
         if (!opt.text.trim())
           validationErrors.push(
-            `Question ${wizard.questions.indexOf(q) + 1} has an empty option.`
+            `Quiz Question ${wizard.questions.indexOf(q) + 1} has an empty option.`
           );
       }
     }
@@ -972,7 +972,7 @@ export default function QuizBuilderWizard({
                   {wizard.passingScore}%
                 </div>
                 <div>
-                  <span className="font-medium">Questions:</span>{" "}
+                  <span className="font-medium">Quiz Questions:</span>{" "}
                   {wizard.questions.length}
                 </div>
               </div>

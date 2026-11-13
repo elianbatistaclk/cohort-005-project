@@ -357,7 +357,7 @@ export function CommentThread({
       <CardContent className="p-6">
         <div className="mb-4 flex items-center gap-2">
           <MessageSquare className="size-5 text-primary" />
-          <h2 className="text-xl font-semibold">Questions &amp; Discussion</h2>
+          <h2 className="text-xl font-semibold">Comments</h2>
         </div>
 
         {comments.length === 0 ? (
