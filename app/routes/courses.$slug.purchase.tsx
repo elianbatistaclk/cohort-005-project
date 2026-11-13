@@ -588,9 +588,9 @@ export default function PurchaseConfirmation({
                     </div>
 
                     <p className="text-sm text-muted-foreground">
-                      You&apos;ll receive {quantity} unique coupon{" "}
-                      {quantity === 1 ? "link" : "links"} to share with your
-                      team members. Each link grants one person access to this
+                      You&apos;ll receive {quantity} unique Seat{" "}
+                      {quantity === 1 ? "Code" : "Codes"} to share with your
+                      team. Each Seat Code lets one person claim a Seat in this
                       course.
                     </p>
 

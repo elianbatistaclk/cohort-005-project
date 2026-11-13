@@ -249,8 +249,8 @@ function getStudentRevenue(
 
   const studentIds = students.map((student) => student.userId);
 
-  // Correlated: did this purchase mint seats for other people?
-  const mintedSeats = db
+  // Correlated: did this purchase buy Seats for other people?
+  const teamSeats = db
     .select({ one: sql`1` })
     .from(coupons)
     .where(eq(coupons.purchaseId, purchases.id));
@@ -262,7 +262,7 @@ function getStudentRevenue(
     .where(
       and(
         inArray(purchases.userId, studentIds),
-        notExists(mintedSeats),
+        notExists(teamSeats),
         ownedBy(instructorId)
       )
     )
@@ -928,7 +928,7 @@ export async function loader({ request, url }: Route.LoaderArgs) {
 
   // How many people paid, and how many are learning. Deliberately two numbers:
   // one team purchase is a single buyer covering several seats, and someone who
-  // redeems a seat enrols without a purchase row of their own.
+  // claims a Seat enrols without a purchase row of their own.
   const buyerCountRow = db
     .select({ buyerCount: countDistinct(purchases.userId) })
     .from(purchases)
@@ -1662,7 +1662,7 @@ export default function InstructorAnalytics({
               <StatCard
                 label="Enrolled students"
                 value={audience.studentCount}
-                hint={`Learners with access, seats included.${
+                hint={`Students with access, Seats included.${
                   audience.revenuePerStudentCents === null
                     ? ""
                     : ` ${formatMoney(

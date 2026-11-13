@@ -10,6 +10,7 @@ import {
   type RenderedComment,
 } from "~/components/comment-thread";
 import { MIN_COMMENT_LENGTH, MAX_COMMENT_LENGTH } from "~/lib/comments";
+import { markLessonComplete } from "~/lib/progress.server";
 import { db } from "~/db";
 import {
   categories,
@@ -215,33 +216,6 @@ function getLessonProgressForCourse(userId: number, courseId: number) {
     .all();
 }
 
-function markLessonComplete(userId: number, lessonId: number) {
-  const existing = getLessonProgress(userId, lessonId);
-
-  if (existing) {
-    return db
-      .update(lessonProgress)
-      .set({
-        status: LessonProgressStatus.Completed,
-        completedAt: new Date().toISOString(),
-      })
-      .where(eq(lessonProgress.id, existing.id))
-      .returning()
-      .get();
-  }
-
-  return db
-    .insert(lessonProgress)
-    .values({
-      userId,
-      lessonId,
-      status: LessonProgressStatus.Completed,
-      completedAt: new Date().toISOString(),
-    })
-    .returning()
-    .get();
-}
-
 function markLessonInProgress(userId: number, lessonId: number) {
   const existing = getLessonProgress(userId, lessonId);
 
@@ -285,7 +259,7 @@ function getLastWatchPosition(userId: number, lessonId: number) {
   return lastEvent?.positionSeconds ?? 0;
 }
 
-function calculateWatchProgress(
+function calculateWatchPositionPercent(
   userId: number,
   lessonId: number,
   videoDurationSeconds: number
@@ -726,7 +700,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   const enrolled = access.enrolled;
   let lessonStatus: string | null = null;
   let lastWatchPosition = 0;
-  let watchProgress = 0;
+  let watchPositionPercent = 0;
   let lessonProgressMap: Record<number, string> = {};
 
   if (currentUserId) {
@@ -736,7 +710,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
       const progress = getLessonProgress(currentUserId, lessonId);
       lessonStatus = progress?.status ?? null;
 
-      // Get progress for all lessons in course (for curriculum sidebar)
+      // Get progress for all lessons in course (for the Module sidebar)
       const progressRecords = getLessonProgressForCourse(
         currentUserId,
         course.id
@@ -750,7 +724,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
         lastWatchPosition = getLastWatchPosition(currentUserId, lessonId);
         const videoDurationSeconds = (lesson.durationMinutes ?? 0) * 60;
         if (videoDurationSeconds > 0) {
-          watchProgress = calculateWatchProgress(
+          watchPositionPercent = calculateWatchPositionPercent(
             currentUserId,
             lessonId,
             videoDurationSeconds
@@ -766,7 +740,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     access;
 
   // Comments are confidential to the course: only people who can read the
-  // lesson can read the discussion on it.
+  // lesson can read the comments on it.
   const instructor = getUserById(course.instructorId);
   const comments = canViewContent
     ? await renderThread(getLessonThread(lessonId))
@@ -835,7 +809,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
       title: courseWithDetails.title,
       slug: courseWithDetails.slug,
     },
-    curriculum: courseWithDetails.modules.map((m) => ({
+    sidebarModules: courseWithDetails.modules.map((m) => ({
       id: m.id,
       title: m.title,
       lessons: m.lessons.map((l) => ({
@@ -857,7 +831,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     quiz,
     bestAttempt,
     lastWatchPosition,
-    watchProgress,
+    watchPositionPercent,
     lessonProgressMap,
     pppBlocked,
     pppBlockedCountry,
@@ -1009,7 +983,7 @@ function useAutoplay() {
 export default function LessonViewer({ loaderData }: Route.ComponentProps) {
   const {
     course,
-    curriculum,
+    sidebarModules,
     module: mod,
     lesson,
     contentHtml,
@@ -1021,7 +995,7 @@ export default function LessonViewer({ loaderData }: Route.ComponentProps) {
     quiz,
     bestAttempt,
     lastWatchPosition,
-    watchProgress,
+    watchPositionPercent,
     lessonProgressMap,
     pppBlocked,
     pppBlockedCountry,
@@ -1098,7 +1072,7 @@ export default function LessonViewer({ loaderData }: Route.ComponentProps) {
       {/* Curriculum Sidebar */}
       <CurriculumSidebar
         course={course}
-        curriculum={curriculum}
+        sidebarModules={sidebarModules}
         currentLessonId={lesson.id}
         lessonProgressMap={lessonProgressMap}
         enrolled={enrolled}
@@ -1160,7 +1134,7 @@ export default function LessonViewer({ loaderData }: Route.ComponentProps) {
               title={lesson.title}
               startPosition={lastWatchPosition}
               durationMinutes={lesson.durationMinutes}
-              watchProgress={watchProgress}
+              watchPositionPercent={watchPositionPercent}
               trackingEnabled={enrolled && !!currentUserId}
               autoplay={autoplay}
               onToggleAutoplay={toggleAutoplay}
@@ -1240,7 +1214,7 @@ export default function LessonViewer({ loaderData }: Route.ComponentProps) {
             </div>
           )}
 
-          {/* Questions & Discussion — confidential to people with access */}
+          {/* Comments — confidential to people with access */}
           {canViewContent && (
             <CommentThread
               comments={comments}
@@ -1306,13 +1280,13 @@ export default function LessonViewer({ loaderData }: Route.ComponentProps) {
 
 function CurriculumSidebar({
   course,
-  curriculum,
+  sidebarModules,
   currentLessonId,
   lessonProgressMap,
   enrolled,
 }: {
   course: { id: number; title: string; slug: string };
-  curriculum: Array<{
+  sidebarModules: Array<{
     id: number;
     title: string;
     lessons: Array<{ id: number; title: string }>;
@@ -1322,7 +1296,7 @@ function CurriculumSidebar({
   enrolled: boolean;
 }) {
   // Find which module the current lesson belongs to
-  const currentModuleId = curriculum.find((m) =>
+  const currentModuleId = sidebarModules.find((m) =>
     m.lessons.some((l) => l.id === currentLessonId)
   )?.id;
 
@@ -1358,7 +1332,7 @@ function CurriculumSidebar({
         </div>
 
         <nav className="flex-1 p-2">
-          {curriculum.map((mod) => {
+          {sidebarModules.map((mod) => {
             const isExpanded = expandedModules.has(mod.id);
 
             return (
